@@ -43,3 +43,12 @@ La aplicación es completamente estática y usa `localStorage` del navegador. Lo
 - `README.md`: instrucciones y reglas.
 
 Sin dependencias, frameworks, conexiones externas ni cookies de terceros.
+
+## Configuración de barra e inventario
+
+- Desde **Inventario de discos**, en el menú lateral, se configura para cada peso la **cantidad de pares** y su **color**.
+- La **Mesa de levantamientos** muestra una representación de los discos de un lado de una barra fija de **20 kg**. Se debe cargar el otro lado de forma simétrica.
+- Se puede seleccionar manualmente al deportista que está en plataforma desde la columna **En plataforma**; de lo contrario se presenta el primer intento pendiente con una carga declarada, de menor a mayor peso.
+- El panel funciona en sentadilla, press banca y peso muerto, para las tres rondas.
+- El cálculo respeta los pares disponibles en el inventario y avisa cuando la carga no puede componerse exactamente. No incluye el peso de los collarines.
+- Las preferencias de discos quedan en el mismo almacenamiento local y se exportan con el respaldo JSON.
