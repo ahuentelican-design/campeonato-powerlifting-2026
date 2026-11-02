@@ -9,3 +9,28 @@
 .starter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .registration-actions{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:650px){.starter-grid{grid-template-columns:1fr}}
+
+/* Herramienta de carga: barra simétrica y control de discos */
+.lifting-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,475px);gap:20px;align-items:start;margin-bottom:19px}
+.lifting-info{min-width:0}
+.lifting-info .pagehead{margin-bottom:20px}
+.lifting-top .exercise-tabs{margin-bottom:13px}
+.load-widget{border:1px solid #dfe5ee;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 3px 12px #13294407;min-width:0;padding:15px 17px}
+.load-title{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#ab7d30;font-size:10px;letter-spacing:.12em;font-weight:800}
+.load-title .btn{font-size:10px;letter-spacing:0}
+.load-weight{font-size:35px;letter-spacing:-.045em;line-height:1.25;font-weight:850;color:#16263f;margin:7px 0 2px;font-variant-numeric:tabular-nums}
+.load-weight small{font-size:18px;color:#697b90}
+.load-athlete{font-size:12px;color:#75849a;min-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.load-widget svg{width:100%;height:auto;max-height:165px;display:block;margin:6px auto 0}
+.load-error{margin:16px 0;padding:14px;color:#9b5b20;background:#fff7e6;border:1px solid #ecd6a7;border-radius:8px;font-size:12px}
+.plate-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.plate-legend span{padding:6px 8px;border-radius:6px;background:#eef2f8;color:#24344a;font-size:11px;font-weight:800}
+.plate-legend small{color:#6d7c90;font-size:9px;font-weight:500}
+.load-caption{font-size:10px;line-height:1.4;color:#8b97a7;margin-top:10px}
+.select-lifter{min-width:35px;padding:7px 8px;border:1px solid #d8e0eb;color:#61748c;border-radius:8px;background:white;font-weight:800}
+.select-lifter.chosen{background:#223a57;color:#fff;border-color:#223a57}
+tr.lift-current{background:#fff9e9!important}
+.plate-color-cell{display:flex;align-items:center;gap:10px}
+.plate-color-cell input[type="color"]{width:44px;height:35px;cursor:pointer;border:1px solid #d7dfeb;border-radius:7px;padding:2px;background:white}
+.plate-color-cell span{color:#7e8b9f;font-family:monospace;font-size:12px}
+@media(max-width:1150px){.lifting-top{grid-template-columns:1fr}.load-widget{max-width:620px}}
