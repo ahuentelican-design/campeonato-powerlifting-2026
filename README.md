@@ -52,3 +52,7 @@ Sin dependencias, frameworks, conexiones externas ni cookies de terceros.
 - El panel funciona en sentadilla, press banca y peso muerto, para las tres rondas.
 - El cálculo respeta los pares disponibles en el inventario y avisa cuando la carga no puede componerse exactamente. No incluye el peso de los collarines.
 - Las preferencias de discos quedan en el mismo almacenamiento local y se exportan con el respaldo JSON.
+
+## Jueces configurables
+
+En **Configuración → Jueces de la competencia** se seleccionan de 1 a 7 jueces y se ingresan nombres y apellidos. En la mesa se muestran sus iniciales, por ejemplo **J. A.H.** (Alejandro Huentelican), con botones circulares verdes (válido) y rojos (nulo). La mayoría necesaria es `floor(número de jueces / 2) + 1`. Si se configura un número par y los votos empatan, el resultado es **Empate**, no válido. Cambiar la cantidad de jueces puede recalcular resultados anteriores; los votos se conservan en el respaldo JSON.
