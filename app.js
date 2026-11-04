@@ -146,38 +146,51 @@ function platePlan(load){
 }
 function plateGraphic(plan){
  if(!plan.ok)return '<div class="load-error">'+esc(plan.message)+'</div>';
- const colors=plan.plates;
- let x=74;
- const rectangles=colors.map((p,i)=>{
- const height= Math.round(37+Number(p.kg)/25*65);
- const width=Math.max(13,Math.min(23,13+Number(p.kg)/25*10));
- const y=91-height/2;
- const fill=esc(p.color||'#64748b');
- const stroke=fill.toLowerCase()==='#f7f8fc'?'#a6b3c7':'#192438';
- const item='<rect x="'+x+'" y="'+y+'" rx="2" width="'+width+'" height="'+height+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.4"/>'+
- '<text x="'+(x+width/2)+'" y="95" text-anchor="middle" fill="'+(Number(p.kg)===5?'#1c2639':'#ffffff')+'" font-size="11" font-weight="800">'+esc(p.kg)+'</text>';
- x+=width+3;return item;
- }).join('');
- const end=Math.max(330,x+70);
- return '<svg role="img" aria-label="Discos de un lado de la barra de 20 kg" viewBox="0 0 '+end+' 180" xmlns="http://www.w3.org/2000">'+
- '<rect x="16" y="86" width="'+(end-40)+'" height="10" rx="4" fill="#77889e"/>'+
- '<rect x="35" y="71" width="15" height="40" rx="4" fill="#43546a"/>'+
- rectangles+
- '<rect x="'+x+'" y="74" width="14" height="35" rx="3" fill="#4d5c71"/>'+
- '<text x="16" y="150" fill="#7c899c" font-size="12">Barra: 20 kg</text>'+
- '<text x="'+(end-15)+'" y="150" text-anchor="end" fill="#7c899c" font-size="12">Por lado: '+fixed(plan.side)+' kg</text></svg>';
+ // Se muestra un solo extremo de la barra; de izquierda a derecha, menor a mayor.
+ const ordered=[...plan.plates].sort((a,b)=>Number(a.kg)-Number(b.kg));
+ const discs=ordered.map(p=>{
+   const kg=Number(p.kg);
+   return {
+     kg,
+     width:Math.round(20+kg/25*11),
+     height:Math.round(54+kg/25*90),
+     fill:String(p.color||'#64748b').match(/^#[0-9a-fA-F]{6}$/)?.[0]||'#64748b'
+   };
+ });
+ const gap=4;
+ const groupWidth=discs.reduce((sum,d)=>sum+d.width,0)+Math.max(0,discs.length-1)*gap;
+ // Marco adaptable: se agranda si hay muchos discos, sin cortarlos.
+ const width=Math.max(480,Math.ceil(groupWidth+130));
+ const midY=112,collarX=width-37,discEnd=collarX-7;
+ let x=discEnd-groupWidth;
+ let rects='';
+ for(const d of discs){
+   const y=midY-d.height/2;
+   const rgb=parseInt(d.fill.slice(1),16);
+   const luma=0.2126*((rgb>>16)&255)+0.7152*((rgb>>8)&255)+0.0722*(rgb&255);
+   const textColor=luma>160?'#1a293e':'#ffffff';
+   const fontSize=d.kg<2.5?'9':'12';
+   rects+='<rect x="'+x+'" y="'+y+'" rx="3" width="'+d.width+'" height="'+d.height+'" fill="'+d.fill+'" stroke="#354357" stroke-width="1.4"/>'+
+          '<text x="'+(x+d.width/2)+'" y="'+(midY+4)+'" text-anchor="middle" fill="'+textColor+'" font-size="'+fontSize+'" font-weight="800">'+fixed(d.kg)+'</text>';
+   x+=d.width+gap;
+ }
+ return '<svg role="img" aria-label="Discos por lado ordenados de menor a mayor hacia la derecha" viewBox="0 0 '+width+' 205" xmlns="http://www.w3.org/2000/svg">'+
+  '<rect x="20" y="'+(midY-5)+'" width="'+(width-29)+'" height="10" rx="5" fill="#8191a7"/>'+
+  '<rect x="28" y="'+(midY-14)+'" width="15" height="28" rx="4" fill="#46586f"/>'+
+  rects+
+  '<rect x="'+collarX+'" y="'+(midY-23)+'" width="14" height="46" rx="4" fill="#4b5d75"/>'+
+  '<text x="20" y="191" fill="#718096" font-size="13">Barra: 20 kg</text>'+
+  '<text x="'+(width-15)+'" y="191" text-anchor="end" fill="#718096" font-size="13">'+fixed(plan.side)+' kg por lado</text></svg>';
 }
 function loadWidget(sorted){
  const selected=activeLifter(sorted);
  const load=selected?num(selected.t.kg):0;
  const plan=platePlan(load);
- const packed=plan.ok?plan.plates.reduce((o,p)=>{o[p.kg]=(o[p.kg]||0)+1;return o},{}):{};
  return '<div class="load-widget"><div class="load-title"><span>CONFIGURACIÓN DE BARRA</span><button class="btn tiny light" data-go="plates">Editar discos</button></div>'+
  '<div class="load-weight">'+(selected&&load>=20?fixed(load)+' <small>kg</small>':'Sin carga')+'</div>'+
  '<div class="load-athlete">'+(selected?esc(selected.a.name)+' · Intento '+(round+1):'Selecciona un levantador')+'</div>'+
  plateGraphic(plan)+
- (plan.ok?'<div class="plate-legend">'+Object.entries(packed).sort((a,b)=>Number(b[0])-Number(a[0])).map(([k,v])=>'<span>'+v+' × '+k+' kg <small>por lado</small></span>').join('')+'</div>':'')+
- '<div class="load-caption">Representación de un lado de la barra. Colocar la misma cantidad de discos al otro lado.</div></div>';
+ '<div class="load-caption">Discos de un lado de la barra; cargar el lado opuesto de forma simétrica.</div></div>';
 }
 function platesPage(){
  const rows=(state.plates||[]).map((p,i)=>'<tr><td><strong>'+fixed(p.kg)+' kg</strong></td><td><input class="compact-input" aria-label="Pares disponibles de '+p.kg+' kg" data-pairs="'+i+'" type="number" min="0" max="100" step="1" value="'+Number(p.pairs)+'"></td><td><div class="plate-color-cell"><input type="color" data-color="'+i+'" value="'+esc(p.color)+'" aria-label="Color de discos de '+p.kg+' kg"><span>'+esc(p.color)+'</span></div></td><td>'+Number(p.pairs)*2+' discos</td></tr>');
