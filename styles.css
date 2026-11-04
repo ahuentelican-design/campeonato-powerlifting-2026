@@ -34,3 +34,19 @@ tr.lift-current{background:#fff9e9!important}
 .plate-color-cell input[type="color"]{width:44px;height:35px;cursor:pointer;border:1px solid #d7dfeb;border-radius:7px;padding:2px;background:white}
 .plate-color-cell span{color:#7e8b9f;font-family:monospace;font-size:12px}
 @media(max-width:1150px){.lifting-top{grid-template-columns:1fr}.load-widget{max-width:620px}}
+
+
+/* Arbitraje con botones circulares individuales */
+.judges-row{display:flex;justify-content:center;align-items:center;gap:18px;min-width:350px}
+.judge-control{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:96px}
+.judge-label{font-size:11px;font-weight:800;letter-spacing:.08em;color:#758299}
+.judge-choice{display:flex;align-items:center;gap:8px}
+.judge-vote{display:inline-flex;justify-content:center;align-items:center;width:39px;height:39px;min-width:39px;padding:0;border-radius:50%;font-size:19px;font-weight:850;line-height:1;border:2px solid transparent;transition:background .14s ease,box-shadow .14s ease,transform .14s ease;opacity:.55}
+.judge-vote:hover{opacity:1;transform:translateY(-1px)}
+.judge-vote:focus-visible{outline:3px solid #dcae59;outline-offset:3px}
+.judge-yes{color:#15784b;background:#d8f4e6;border-color:#a6dfbf}
+.judge-no{color:#af343d;background:#ffe0e1;border-color:#edb0b4}
+.judge-yes.is-selected{background:#15865a;color:#fff;border-color:#0f704b;box-shadow:0 0 0 3px #b6eacd;opacity:1}
+.judge-no.is-selected{background:#ce3d48;color:#fff;border-color:#b72936;box-shadow:0 0 0 3px #ffd0d2;opacity:1}
+.vote-cell{min-width:360px;text-align:center}
+@media(max-width:650px){.judges-row{min-width:300px;gap:9px}.judge-control{min-width:90px}.judge-vote{width:36px;height:36px;min-width:36px}}
