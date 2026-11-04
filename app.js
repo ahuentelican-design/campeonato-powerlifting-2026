@@ -73,15 +73,53 @@ function voteControls(a,t,j){
  '</div></div>';
 }
 function liftingPage(){
- const sorted=orderedLifters(), selected=activeLifter(sorted);
- const rows=sorted.map(({a,t},i)=>'<tr class="'+(selected&&a.id===selected.a.id?'lift-current':'')+'"><td><button class="select-lifter '+(selected&&a.id===selected.a.id?'chosen':'')+'" data-current="'+esc(a.id)+'">'+(selected&&a.id===selected.a.id?'● ':'')+(i+1)+'</button></td><td><strong>'+esc(a.name)+'</strong><br><small>'+esc(group(a))+' · '+esc(division(a))+'</small></td><td><input aria-label="Carga en kilogramos" class="compact-input" data-kg="'+esc(a.id)+'" type="number" min="0" max="800" step=".5" value="'+esc(t.kg??'')+'"></td><td class="vote-cell" colspan="3"><div class="judges-row">'+Array.from({length:judgeCount()},(_,j)=>voteControls(a,t,j)).join('')+'</div></td><td>'+tag(result(t),result(t)==='Válido'?'good':result(t)==='Nulo'?'bad':'')+'</td></tr>');
+ let changed=false;
+ for(const athlete of state.athletes){if(syncNextLoads(athlete,movement))changed=true}
+ if(changed)save();
+ const sorted=orderedLifters(),selected=activeLifter(sorted);
+ const rows=sorted.map(({a,t},i)=>'<tr class="'+(selected&&a.id===selected.a.id?'lift-current':'')+'"><td><button class="select-lifter '+(selected&&a.id===selected.a.id?'chosen':'')+'" data-current="'+esc(a.id)+'">'+(selected&&a.id===selected.a.id?'● ':'')+(i+1)+'</button></td><td><strong>'+esc(a.name)+'</strong><br><small>'+esc(group(a))+' · '+esc(division(a))+'</small></td><td>'+attemptLoadCell(a,t)+'</td><td class="vote-cell" colspan="3"><div class="judges-row">'+Array.from({length:judgeCount()},(_,j)=>voteControls(a,t,j)).join('')+'</div></td><td>'+tag(result(t),result(t)==='Válido'?'good':result(t)==='Nulo'?'bad':'')+'</td></tr>');
  return '<div class="lifting-top"><div class="lifting-info">'+header('Mesa de levantamientos','Selecciona en la columna Orden al deportista en plataforma. El gráfico indica los discos necesarios para su carga.')+
  '<div class="exercise-tabs">'+MOV.map(m=>'<button data-move="'+m[0]+'" class="'+(movement===m[0]?'active':'')+'">'+m[1]+'</button>').join('')+'</div>'+
  '<div class="exercise-tabs">'+[0,1,2].map(i=>'<button data-round="'+i+'" class="'+(round===i?'active':'')+'">Intento '+(i+1)+'</button>').join('')+'</div></div>'+
  loadWidget(sorted)+'</div>'+
  panel('Orden de salida · '+MOV.find(m=>m[0]===movement)[1]+' · Intento '+(round+1),table(['En plataforma','Deportista','Carga (kg)','Decisiones de los jueces','','','Resultado'],rows))+
- '<div class="warning">El orden se actualiza por carga; la votación queda vinculada al deportista. Haz clic en el número de la primera columna para visualizar su configuración de barra. Los intentos aprobados con dos o más votos válidos se contabilizan para la premiación.</div>';
+ '<div class="warning">En los intentos 2 y 3 se muestra en verde la carga anterior válida y en rojo la nula. La siguiente carga nunca puede ser menor que la anterior; cuando el intento previo se resuelve, se propone automáticamente como mínimo sin reemplazar cargas mayores ya registradas.</div>';
 }
+function minimumForAttempt(a,m,r){
+ if(r<=0)return 20;
+ const previous=lifts(a,m)[r-1];
+ return Number.isFinite(Number(previous.kg))&&num(previous.kg)>=20?num(previous.kg):20;
+}
+function attemptHasVotes(t){
+ return Array.isArray(t.votes)&&t.votes.some(v=>v===true||v===false);
+}
+function syncNextLoads(a,m){
+ const attempts=lifts(a,m);let changed=false;
+ for(let i=1;i<3;i++){
+  const previous=attempts[i-1],current=attempts[i];
+  if(!previous||!current||num(previous.kg)<20)continue;
+  const previousResult=result(previous);
+  if(previousResult!=='Válido'&&previousResult!=='Nulo')continue;
+  if(attemptHasVotes(current))continue;
+  const min=minimumForAttempt(a,m,i);
+  if(!num(current.kg)||num(current.kg)<min){current.kg=min;changed=true}
+ }
+ return changed;
+}
+function attemptLoadCell(a,t){
+ const previous=round>0?lifts(a,movement)[round-1]:null;
+ const previousStatus=previous?result(previous):'Pendiente';
+ const hasPrevious=previous&&num(previous.kg)>0;
+ const previousClass=previousStatus==='Válido'?'prior-valid':previousStatus==='Nulo'?'prior-null':'prior-pending';
+ const previousText=hasPrevious?'Intento '+round+': '+fixed(previous.kg)+' kg · '+previousStatus:'Intento anterior: sin carga';
+ const before=round>0?'<span class="previous-attempt '+previousClass+'">'+esc(previousText)+'</span>':'';
+ const minimum=minimumForAttempt(a,movement,round);
+ const hint=round>0?'<span class="attempt-minimum">Mínimo: '+fixed(minimum)+' kg</span>':'';
+ return '<div class="attempt-load-cell">'+before+
+ '<div class="attempt-load-input"><input aria-label="Carga del intento '+(round+1)+' en kilogramos" class="compact-input" data-kg="'+esc(a.id)+'" type="number" min="'+minimum+'" max="800" step=".5" value="'+esc(t.kg??'')+'"><span>kg</span></div>'+
+ hint+'</div>';
+}
+
 function validLoad(t){return Number.isFinite(Number(t.kg))&&Number(t.kg)>=20}
 function orderedLifters(){return state.athletes.map(a=>({a,t:lifts(a,movement)[round]})).sort((x,y)=>(validLoad(x.t)?num(x.t.kg):Infinity)-(validLoad(y.t)?num(y.t.kg):Infinity)||x.a.name.localeCompare(y.a.name,'es'))}
 function activeLifter(sorted){const chosen=sorted.find(x=>x.a.id===activeLifterId);if(chosen)return chosen;return sorted.find(x=>validLoad(x.t)&&result(x.t)==='Pendiente')||sorted.find(x=>validLoad(x.t))||null}
@@ -184,5 +222,16 @@ save();render()});
 document.addEventListener('change',e=>{const x=e.target;if(x.id==='judgeCount'){
  const n=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(x.value)||3)));
  document.querySelectorAll('[data-judge-entry]').forEach(el=>{el.hidden=Number(el.dataset.judgeEntry)>=n});
-}else if(x.dataset.pairs!==undefined||x.dataset.color!==undefined){const i=Number(x.dataset.pairs??x.dataset.color);const p=state.plates[i];if(!p)return;if(x.dataset.pairs!==undefined)p.pairs=Math.max(0,Math.min(100,Math.floor(Number(x.value)||0)));else if(/^#[a-fA-F0-9]{6}$/.test(x.value))p.color=x.value;save();render()}else if(x.dataset.kg||x.dataset.vote){const a=state.athletes.find(a=>a.id===(x.dataset.kg||x.dataset.vote));if(!a)return;const t=lifts(a,movement)[round];if(x.dataset.kg)t.kg=x.value===''?null:Number(x.value);else t.votes[+x.dataset.judge]=x.value===''?null:x.value==='true';save();render()}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);if(!Array.isArray(state.plates))state.plates=DEFAULT_PLATES.map(p=>({...p}));save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
+}else if(x.dataset.pairs!==undefined||x.dataset.color!==undefined){const i=Number(x.dataset.pairs??x.dataset.color);const p=state.plates[i];if(!p)return;if(x.dataset.pairs!==undefined)p.pairs=Math.max(0,Math.min(100,Math.floor(Number(x.value)||0)));else if(/^#[a-fA-F0-9]{6}$/.test(x.value))p.color=x.value;save();render()}else if(x.dataset.kg||x.dataset.vote){const a=state.athletes.find(a=>a.id===(x.dataset.kg||x.dataset.vote));if(!a)return;const t=lifts(a,movement)[round];if(x.dataset.kg){
+  const min=minimumForAttempt(a,movement,round);
+  const requested=x.value===''?null:Number(x.value);
+  if(requested!==null&&(!Number.isFinite(requested)||requested<min)){
+    alert('La carga mínima para el intento '+(round+1)+' es '+fixed(min)+' kg. No se puede reducir el peso del intento anterior.');
+    t.kg=min;
+  }else if(requested===null&&round>0&&num(lifts(a,movement)[round-1].kg)>=20){
+    t.kg=min;
+  }else t.kg=requested;
+  syncNextLoads(a,movement);
+ }else t.votes[+x.dataset.judge]=x.value===''?null:x.value==='true';
+ save();render()}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);if(!Array.isArray(state.plates))state.plates=DEFAULT_PLATES.map(p=>({...p}));save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
 render();
