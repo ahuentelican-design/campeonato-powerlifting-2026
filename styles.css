@@ -75,3 +75,11 @@ tr.lift-current{background:#fff9e9!important}
 .attempt-load-input{display:flex;align-items:center;gap:6px;color:#6d7d90;font-size:12px;font-weight:700}
 .attempt-load-cell .compact-input{width:90px;font-variant-numeric:tabular-nums}
 .attempt-minimum{font-size:11px;color:#8a97a8}
+
+/* Gráfico ampliado, alineado a la derecha y sin leyenda inferior */
+.load-widget{padding:17px 20px 18px}
+.load-widget svg{display:block;width:100%;height:auto;max-height:none;margin:12px 0 0 auto}
+.load-widget .load-weight{font-size:42px;line-height:1.2}
+.load-widget .load-weight small{font-size:20px}
+.load-widget .load-athlete{font-size:13px}
+.load-widget .load-caption{font-size:10px;margin-top:4px}
