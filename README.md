@@ -96,3 +96,11 @@ En intentos 1 y 2, la columna **Siguiente carga (kg)** aparece entre la carga ac
 **Mesa central:** En Configuración → **Consolidación de tarimas · Importar resultados**, importa SQ y BP por separado. Antes de confirmar, la aplicación comprueba que coincidan todos los identificadores oficiales, nombres, categorías, sexos, pesos corporales, grupos, número de jueces, cargas e intentos. Si falta un deportista, sobra alguno, hay duplicados o el movimiento no corresponde, se rechaza el archivo sin modificar resultados. Una importación válida reemplaza **solo los tres intentos del movimiento elegido**. El resto de la nómina y las otras pruebas se conserva. El peso muerto se evalúa en la mesa central.
 
 **Recomendaciones:** No modificar la nómina cerrada en ningún equipo; conservar los CSV originales como evidencia y exportar un respaldo JSON completo desde la mesa central después de consolidar. No existe sincronización automática ni bloqueo de reimportaciones: importar de nuevo el mismo movimiento sobrescribe sus resultados tras confirmación. La app no transmite archivos por red.
+
+## Pantalla pública en vivo (segundo monitor)
+
+Desde **Mesa de levantamientos** pulsa **Abrir pantalla pública**. Se abrirá `publico.html` en una ventana independiente que muestra el atleta seleccionado, movimiento, grupo, intento, carga, barra con discos de un lado, votos de los jueces y resultado **Pendiente / Válido / Nulo**. Usa **Pantalla completa** y arrastra la ventana al monitor o proyector de público.
+
+La actualización utiliza `BroadcastChannel` y el evento `storage` del navegador, con un snapshot local para las ventanas abiertas posteriormente. Está diseñada para **dos ventanas del mismo navegador/perfil y origen** (p. ej., computador de mesa con pantalla extendida). GitHub Pages **no ofrece sincronización entre equipos distintos**; para proyectar desde otro computador haría falta un servicio de datos compartido.
+
+La pantalla muestra la selección activa en la mesa, no avances automáticos; si quieres mostrar otra persona, selecciónala desde la mesa. No publica datos en Internet ni envía información de árbitros a un servidor.
