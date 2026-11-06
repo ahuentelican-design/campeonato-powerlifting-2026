@@ -184,7 +184,7 @@ function prepareLiftResultsImport(content,expectedMove,data=state){
 }
 function applyLiftResultsImport(prepared,data=state){
  // Única escritura sobre los deportistas: el movimiento especificado, sin tocar datos personales ni otros movimientos.
- for(const a of data.athletes){a.lifts[prepared.movement]=prepared.athletes.get(a.competitionId).map(t=>({kg:t.kg,votes:[...t.votes],nextLoadManual:t.nextLoadManual}))}
+ for(const a of data.athletes){a.lifts[prepared.movement]=prepared.athletes.get(a.competitionId).map(t=>({kg:t.kg,votes:t.votes.slice(0,Math.max(3,Math.floor(Number(data.judgeCount)||3))),nextLoadManual:t.nextLoadManual}))}
  data.liftImports=data.liftImports||{};
  data.liftImports[prepared.movement]={count:prepared.count,at:new Date().toISOString()};
 }
