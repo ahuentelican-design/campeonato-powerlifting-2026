@@ -84,3 +84,15 @@ En intentos 1 y 2, la columna **Siguiente carga (kg)** aparece entre la carga ac
 - Lo introducido se guarda como carga del siguiente intento y aparecerá en su ronda correspondiente, sin tener que volver a introducirlo.
 - No se sobrescriben cargas superiores ya introducidas ni las que tienen votos en la ronda siguiente; el campo queda deshabilitado si ya existen votos.
 - En el intento 3 se muestra «Último intento».
+
+## Transferencia de resultados por prueba entre tarimas y mesa central
+
+**Preparación (una sola vez):** En Inscripciones, distribuye grupos A/B, confirma y cierra la nómina y descarga **Nómina para equipos (JSON)**. Importa ese mismo archivo con **Importar respaldo** en la tarima SQ, la tarima BP y la mesa central. No vuelvas a inscribir participantes por separado. La importación de respaldo completo reemplaza todos los datos del navegador: antes de importar, guarda cualquier respaldo previo importante.
+
+**Tarima sentadilla:** En Mesa de levantamientos selecciona SQ, registra los tres intentos de los grupos A y B y pulsa **Exportar resultados SQ (CSV) · Todos los grupos**. La exportación incluye los tres intentos de todos los deportistas, independientemente del grupo visible.
+
+**Tarima press banca:** Procedimiento equivalente en BP, con **Exportar resultados BP (CSV)**.
+
+**Mesa central:** En Configuración → **Consolidación de tarimas · Importar resultados**, importa SQ y BP por separado. Antes de confirmar, la aplicación comprueba que coincidan todos los identificadores oficiales, nombres, categorías, sexos, pesos corporales, grupos, número de jueces, cargas e intentos. Si falta un deportista, sobra alguno, hay duplicados o el movimiento no corresponde, se rechaza el archivo sin modificar resultados. Una importación válida reemplaza **solo los tres intentos del movimiento elegido**. El resto de la nómina y las otras pruebas se conserva. El peso muerto se evalúa en la mesa central.
+
+**Recomendaciones:** No modificar la nómina cerrada en ningún equipo; conservar los CSV originales como evidencia y exportar un respaldo JSON completo desde la mesa central después de consolidar. No existe sincronización automática ni bloqueo de reimportaciones: importar de nuevo el mismo movimiento sobrescribe sus resultados tras confirmación. La app no transmite archivos por red.
