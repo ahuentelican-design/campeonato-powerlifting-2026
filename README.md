@@ -73,3 +73,14 @@ Al seleccionar **Confirmar y cerrar nómina**, se desactivan inscripciones, edic
 - Si aún no se han asignado grupos, la mesa muestra todos los participantes y señala que falta distribución.
 
 **Nota:** la elección de grupo es local a este navegador, no una configuración compartida entre computadores. No incluye aún importación CSV entre tarimas ni consolidación de resultados.
+
+## Mesa: declaración inmediata de siguiente carga
+
+En intentos 1 y 2, la columna **Siguiente carga (kg)** aparece entre la carga actual y las decisiones de los jueces. Permanece pendiente hasta que exista una mayoría válida/nula.
+
+- **Válido:** propuesta automática de carga actual + 2,5 kg, admitiendo un aumento manual compatible con incrementos de 0,5 kg (mínimo +0,5 kg).
+- **Nulo:** propuesta de repetir la misma carga; se permite aumentarla manualmente, nunca disminuirla.
+- Tras resolverse la mayoría, el campo se habilita y el foco pasa automáticamente a él para registrar la decisión del deportista.
+- Lo introducido se guarda como carga del siguiente intento y aparecerá en su ronda correspondiente, sin tener que volver a introducirlo.
+- No se sobrescriben cargas superiores ya introducidas ni las que tienen votos en la ronda siguiente; el campo queda deshabilitado si ya existen votos.
+- En el intento 3 se muestra «Último intento».
