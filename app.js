@@ -82,6 +82,144 @@ function distributeGroups(){
  ensureIds();return totals;
 }
 function stationStats(){return ['A','B'].map(g=>{const arr=state.athletes.filter(a=>a.stationGroup===g);return {g,count:arr.length,sq:arr.reduce((n,a)=>n+initial(a,'sq'),0),bp:arr.reduce((n,a)=>n+initial(a,'bp'),0)}})}
+
+const LIFT_CSV_FORMAT='CFN-POWERLIFTING-RESULTADOS';
+const LIFT_CSV_VERSION='1';
+const LIFT_CSV_HEADER=['Formato','Version','Prueba','ID','Nombre','Categoria','Sexo','PesoCorporalKg','GrupoAB','NumeroJueces','Intento','CargaKg','VotoJ1','VotoJ2','VotoJ3','VotoJ4','VotoJ5','VotoJ6','VotoJ7','CargaManual'];
+function csvQuote(value){
+ let v=String(value??'');
+ // Evita que nombres maliciosos sean interpretados como fórmulas por Excel.
+ if(/^[=+@-]/.test(v))v="'"+v;
+ return '"'+v.replace(/"/g,'""')+'"';
+}
+function csvText(rows){return '\uFEFF'+rows.map(row=>row.map(csvQuote).join(';')).join('\r\n')}
+function csvRows(text){
+ const content=String(text).replace(/^\uFEFF/,'');
+ const rows=[];let row=[],field='',quoted=false;
+ for(let i=0;i<content.length;i++){
+  const ch=content[i];
+  if(quoted){
+   if(ch==='"'){if(content[i+1]==='"'){field+='"';i++}else quoted=false}
+   else field+=ch;
+  }else if(ch==='"'&&field==='')quoted=true;
+  else if(ch===';'){row.push(field);field=''}
+  else if(ch==='\n'||ch==='\r'){
+   row.push(field);if(row.some(v=>v!==''))rows.push(row);row=[];field='';
+   if(ch==='\r'&&content[i+1]==='\n')i++;
+  }else field+=ch;
+ }
+ if(quoted)throw Error('CSV incompleto: hay comillas sin cerrar.');
+ if(field!==''||row.length){row.push(field);if(row.some(v=>v!==''))rows.push(row)}
+ return rows;
+}
+function decodedCsvName(s){return /^'[=+@-]/.test(s)?s.slice(1):s}
+function validateRosterForTransfer(data=state){
+ if(!data.groupsLocked)throw Error('Debes cerrar la nómina oficial antes de transferir resultados.');
+ if(!data.athletes.length)throw Error('No hay deportistas registrados.');
+ const ids=data.athletes.map(a=>a.competitionId);
+ if(ids.some(x=>typeof x!=='string'||!x.trim())||new Set(ids).size!==ids.length)throw Error('Todos los deportistas necesitan un identificador oficial único. Revisa la nómina.');
+ if(data.athletes.some(a=>!['A','B'].includes(a.stationGroup)))throw Error('Hay deportistas sin grupo de competencia.');
+}
+function liftResultsCsv(m,data=state){
+ if(!['sq','bp'].includes(m))throw Error('Solo se exportan pruebas de sentadilla o press banca.');
+ validateRosterForTransfer(data);
+ const count=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(data.judgeCount)||3)));
+ const rows=[LIFT_CSV_HEADER];
+ for(const a of [...data.athletes].sort((x,y)=>x.competitionId.localeCompare(y.competitionId))){
+  const attempts=lifts(a,m);
+  for(let i=0;i<3;i++){
+   const t=attempts[i],vote=Array.isArray(t.votes)?t.votes:[];
+   rows.push([LIFT_CSV_FORMAT,LIFT_CSV_VERSION,m,a.competitionId,a.name,group(a),a.sex,num(a.weight),a.stationGroup,count,i+1,
+    t.kg===null?'':t.kg,
+    ...Array.from({length:MAX_JUDGES},(_,j)=>j>=count?'':vote[j]===true?'V':vote[j]===false?'N':''),
+    t.nextLoadManual?'1':'0']);
+  }
+ }
+ return csvText(rows);
+}
+function prepareLiftResultsImport(content,expectedMove,data=state){
+ if(!['sq','bp'].includes(expectedMove))throw Error('Selecciona la prueba SQ o BP para importar.');
+ validateRosterForTransfer(data);
+ const rows=csvRows(content);
+ if(rows.length<2)throw Error('El CSV está vacío.');
+ const expected=LIFT_CSV_HEADER.join('|');
+ if(rows[0].join('|')!==expected)throw Error('Formato CSV incompatible. Importa el archivo de resultados generado desde una tarima.');
+ const map=new Map(data.athletes.map(a=>[a.competitionId,a]));
+ const found=new Map(),judgeNumber=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(data.judgeCount)||3)));
+ for(let i=1;i<rows.length;i++){
+  const r=rows[i];
+  if(r.length!==LIFT_CSV_HEADER.length)throw Error('Fila '+(i+1)+': número de columnas incorrecto.');
+  const [format,version,m,id,rawName,category,sex,weight,stationGroup,judges,attemptIndex,weightKg]=r;
+  if(format!==LIFT_CSV_FORMAT||version!==LIFT_CSV_VERSION)throw Error('Fila '+(i+1)+': versión o formato incorrectos.');
+  if(m!==expectedMove)throw Error('El archivo pertenece a '+m.toUpperCase()+' y no a '+expectedMove.toUpperCase()+'.');
+  const a=map.get(id);
+  if(!a)throw Error('Deportista desconocido en la fila '+(i+1)+': '+id+'. Las nóminas no coinciden.');
+  if(decodedCsvName(rawName)!==a.name||category!==group(a)||sex!==a.sex||Number(weight)!==num(a.weight)||stationGroup!==a.stationGroup)throw Error('Los datos del deportista '+id+' no coinciden con la nómina central.');
+  if(Number(judges)!==judgeNumber)throw Error('El archivo utiliza '+judges+' jueces y la mesa central tiene '+judgeNumber+'. Configura el mismo número antes de importar.');
+  const n=Number(attemptIndex);
+  if(!Number.isInteger(n)||n<1||n>3)throw Error('Intento inválido del deportista '+id+'.');
+  const kg=weightKg===''?null:Number(weightKg);
+  if(kg!==null&&(!Number.isFinite(kg)||kg<20||kg>800||Math.abs(kg*2-Math.round(kg*2))>1e-6))throw Error('Carga no válida para '+id+' (intento '+n+').');
+  const votes=r.slice(12,19);
+  if(votes.some((v,j)=>!['','V','N'].includes(v)||(j>=judgeNumber&&v!=='')))throw Error('Decisiones de jueces incorrectas en '+id+' (intento '+n+').');
+  if(kg===null&&votes.some(Boolean))throw Error('El deportista '+id+' tiene votos sin carga declarada.');
+  const manual=r[19];if(!['0','1'].includes(manual))throw Error('Indicador de carga manual inválido en '+id+'.');
+  if(!found.has(id))found.set(id,[null,null,null]);
+  if(found.get(id)[n-1])throw Error('Intento duplicado para '+id+': intento '+n+'.');
+  found.get(id)[n-1]={kg,votes:Array.from({length:MAX_JUDGES},(_,j)=>votes[j]==='V'?true:votes[j]==='N'?false:null),nextLoadManual:manual==='1'};
+ }
+ if(found.size!==map.size)throw Error('La nómina del archivo no está completa: '+found.size+' de '+map.size+' deportistas. No se importó nada.');
+ for(const [id,trials] of found){
+  if(trials.some(t=>t===null))throw Error('Faltan uno o más intentos del deportista '+id+'.');
+  for(let j=1;j<3;j++){
+   const current=trials[j],prev=trials[j-1];
+   if(current.kg===null)continue;
+   if(prev.kg===null)throw Error('Intento '+(j+1)+' de '+id+' sin el intento anterior cargado.');
+   const nValid=prev.votes.slice(0,judgeNumber).filter(x=>x===true).length;
+   const min=prev.kg+(nValid>=Math.floor(judgeNumber/2)+1?NEXT_MIN_INCREASE:0);
+   if(current.kg<min)throw Error('Carga del intento '+(j+1)+' de '+id+' es inferior al mínimo de '+min+' kg.');
+  }
+ }
+ return {movement:expectedMove,athletes:found,count:found.size,attempts:found.size*3};
+}
+function applyLiftResultsImport(prepared,data=state){
+ // Única escritura sobre los deportistas: el movimiento especificado, sin tocar datos personales ni otros movimientos.
+ for(const a of data.athletes){a.lifts[prepared.movement]=prepared.athletes.get(a.competitionId).map(t=>({kg:t.kg,votes:[...t.votes],nextLoadManual:t.nextLoadManual}))}
+ data.liftImports=data.liftImports||{};
+ data.liftImports[prepared.movement]={count:prepared.count,at:new Date().toISOString()};
+}
+function downloadText(filename,content,type){
+ const url=URL.createObjectURL(new Blob([content],{type}));
+ const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportLiftResults(m){
+ try{
+  const csv=liftResultsCsv(m);
+  downloadText('resultados_'+m.toUpperCase()+'_CFN_2026.csv',csv,'text/csv;charset=utf-8');
+ }catch(e){alert(e.message)}
+}
+function exportRosterForTeams(){
+ try{
+  validateRosterForTransfer();
+  const copy={...state,liftImports:{},athletes:state.athletes.map(a=>({...a,lifts:Object.fromEntries(MOV.map(([m])=>[m,[{kg:initial(a,m),votes:[null,null,null]},{kg:null,votes:[null,null,null]},{kg:null,votes:[null,null,null]}]]))}))};
+  downloadText('nomina_maestra_CFN_2026_equipos.json',JSON.stringify(copy,null,2),'application/json');
+ }catch(e){alert(e.message)}
+}
+function liftTransferPanel(){
+ const ready=state.groupsLocked&&state.athletes.length>0;
+ const info=m=>{
+  const last=state.liftImports?.[m];
+  return last?'<span class="transfer-status">Importados '+last.count+' deportistas · '+esc(new Date(last.at).toLocaleString('es-CL'))+'</span>':'<span class="transfer-status">Sin resultados importados</span>';
+ };
+ return panel('Consolidación de tarimas · Importar resultados',
+  '<div class="panelbody"><p>La nómina debe estar cerrada en los tres equipos y ser idéntica. Cada CSV contiene únicamente los tres intentos de un movimiento, con sus cargas y votos. Al importar se conserva intacta la nómina y la otra prueba.</p>'+
+  '<div class="transfer-grid"><div class="transfer-card"><strong>Sentadilla · Tarima SQ</strong>'+info('sq')+
+  '<button type="button" class="btn light" data-import-results="sq" '+(ready?'':'disabled')+'>Importar resultados SQ (CSV)</button></div>'+
+  '<div class="transfer-card"><strong>Press banca · Tarima BP</strong>'+info('bp')+
+  '<button type="button" class="btn light" data-import-results="bp" '+(ready?'':'disabled')+'>Importar resultados BP (CSV)</button></div></div>'+
+  '<div class="warning">Al importar, se reemplazan únicamente los intentos de la prueba seleccionada en este navegador. Primero se comprueban ID, nombre, categoría, grupo, peso corporal, jueces y los tres intentos de todos los deportistas. El peso muerto se registra directamente en la mesa central.</div></div>');
+}
+
 function rosterCsv(){
  if(!state.groupsLocked||state.athletes.some(a=>!['A','B'].includes(a.stationGroup))){alert('Confirma la distribución de A y B antes de exportar.');return}
  const fields=['ID','Nombre','Categoría','Sexo','Peso corporal kg','División','Grupo competencia','Sentadilla inicial kg','Press banca inicial kg','Peso muerto inicial kg'];
@@ -97,7 +235,7 @@ function athleteRow(a){
 function stationPanel(){
  const count=state.athletes.filter(a=>['A','B'].includes(a.stationGroup)).length,ready=eligibleForDistribution();
  const stats='<div class="group-stats">'+stationStats().map(g=>'<div class="group-stat"><span>Grupo '+g.g+'</span><strong>'+g.count+' deportistas</strong><small>Sentadilla '+fixed(g.sq)+' kg · Banca '+fixed(g.bp)+' kg</small></div>').join('')+'</div>';
- const actions=state.groupsLocked?'<button class="btn light" id="exportRoster">Exportar nómina CSV</button><button class="btn danger" id="unlockGroups">Reabrir nómina</button>':'<button class="btn light" id="distributeGroups" '+(ready?'':'disabled')+'>Distribuir automáticamente A/B</button><button class="btn" id="lockGroups" '+(count>0&&count===state.athletes.length?'':'disabled')+'>Confirmar y cerrar nómina</button>';
+ const actions=state.groupsLocked?'<button class="btn light" id="exportRoster">Exportar nómina CSV</button><button class="btn light" id="exportRosterTeams">Descargar nómina para equipos (JSON)</button><button class="btn danger" id="unlockGroups">Reabrir nómina</button>':'<button class="btn light" id="distributeGroups" '+(ready?'':'disabled')+'>Distribuir automáticamente A/B</button><button class="btn" id="lockGroups" '+(count>0&&count===state.athletes.length?'':'disabled')+'>Confirmar y cerrar nómina</button>';
  return panel('Distribución de grupos A y B','<div class="panelbody">'+stats+'<p class="footnote">'+count+' de '+state.athletes.length+' participantes asignados. El reparto equilibra las cargas iniciales de sentadilla y banca.</p>'+(state.groupsLocked?'<div class="warning">Nómina cerrada. Exporta el CSV para los equipos.</div>':!ready?'<div class="warning">Completa las cargas iniciales de sentadilla y banca de todos (mínimo 20 kg).</div>':'')+'<div class="actions">'+actions+'</div></div>');
 }
 
@@ -139,6 +277,7 @@ function liftingPage(){
  stationGroupControls()+
  '<div class="exercise-tabs">'+[0,1,2].map(i=>'<button data-round="'+i+'" class="'+(round===i?'active':'')+'">Intento '+(i+1)+'</button>').join('')+'</div></div>'+
  loadWidget(sorted)+'</div>'+
+ (movement==='dl'?'':'<div class="transfer-export"><button type="button" class="btn light" data-export-results="'+movement+'" '+(state.groupsLocked?'':'disabled')+'>Exportar resultados '+movement.toUpperCase()+' (CSV) · Todos los grupos</button><span>Incluye A y B, los tres intentos y las decisiones de los jueces.</span></div>')+
  panel('Orden de salida · '+MOV.find(m=>m[0]===movement)[1]+(selectedStationGroup()==='Todos'?' · Todos los grupos':' · Grupo '+selectedStationGroup())+' · Intento '+(round+1)+' · '+sorted.length+' participantes',table(['En plataforma','Deportista','Carga (kg)','Siguiente carga (kg)','Decisiones de los jueces','','','Resultado'],rows.length?rows:['<tr><td colspan="8" class="station-no-athletes">No hay participantes asignados a este grupo. Selecciona otro grupo o revisa las asignaciones en Inscripciones.</td></tr>']))+
  '<div class="warning">El intento 3 se bloquea para cada deportista hasta registrar la carga del intento 2. En los intentos 2 y 3 se muestra en verde la carga anterior válida y en rojo la nula. Tras un levantamiento válido se propone aumentar 2,5 kg y tras uno nulo se propone repetir la carga. Al terminar la evaluación, el atleta puede indicar una carga mayor en «Siguiente carga», y quedará guardada directamente para su próximo intento. Después de un válido debe aumentar; tras un nulo se permite repetir o aumentar.</div>';
 }
@@ -352,7 +491,7 @@ function settingsPage(){
  '<span class="judge-preview">'+esc(judgeLabel(i))+'</span></div>').join('')+'</div>'+
  '<div class="judges-actions"><button class="btn" type="submit">Guardar jueces</button></div></form></div>');
  return header('Configuración','Revisa los grupos de cada tarima y gestiona las categorías de peso y los jueces.')+
- stationReviewPanel()+weights+judges+
+ stationReviewPanel()+liftTransferPanel()+weights+judges+
  '<div class="warning">Modificar la cantidad de jueces cambia la mayoría necesaria y puede actualizar resultados anteriores. Los votos originales se conservan en el respaldo local. Si se usan números pares de jueces, un empate se mostrará como tal y no se contabilizará como levantamiento válido.</div>'+
  '<div class="warning">Exalumnos no tienen divisiones de peso ni clasificación separada por sexo. Su premiación es abierta y utiliza exclusivamente el índice relativo.</div>';
 }
@@ -361,6 +500,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 else if(b.id==='lockGroups'){if(state.groupsLocked)return;if(!state.athletes.length||state.athletes.some(a=>!['A','B'].includes(a.stationGroup))){alert('Asigna A o B a todos los participantes.');return}if(!confirm('¿Confirmar grupos y cerrar inscripciones?'))return;ensureIds();state.groupsLocked=true;save();render();return}
 else if(b.id==='unlockGroups'){if(!state.groupsLocked)return;if(!confirm('¿Reabrir inscripciones y grupos?'))return;state.groupsLocked=false;save();render();return}
 else if(b.id==='exportRoster'){rosterCsv();return}
+else if(b.id==='exportRosterTeams'){exportRosterForTeams();return}
+else if(b.dataset.exportResults!==undefined){exportLiftResults(b.dataset.exportResults);return}
+else if(b.dataset.importResults!==undefined){const move=b.dataset.importResults;if(!['sq','bp'].includes(move))return;const file=document.getElementById('importLiftFile');file.dataset.movement=move;file.value='';file.click();return}
 else if(b.dataset.judgeVote!==undefined){const a=state.athletes.find(a=>a.id===b.dataset.judgeVote);if(!a)return;if(!canUseAttempt(a,movement,round)){alert('Registra primero la carga del intento 2 para habilitar el intento 3.');return}const t=lifts(a,movement)[round];const j=Number(b.dataset.judgeIndex),choice=b.dataset.voteChoice==='true';if(!Array.isArray(t.votes))t.votes=[null,null,null];if(!Number.isInteger(j)||j<0||j>=judgeCount())return;
  const before=result(t);
  t.votes[j]=t.votes[j]===choice?null:choice;
@@ -410,5 +552,18 @@ document.addEventListener('change',e=>{const x=e.target;if(x.id==='stationGroupS
   }else t.kg=requested;
   syncNextLoads(a,movement);
  }else t.votes[+x.dataset.judge]=x.value===''?null:x.value==='true';
- save();render()}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);state.plates=normalizePlates(state.plates);save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
+ save();render()}else if(x.id==='importLiftFile'){
+ const f=x.files?.[0],m=x.dataset.movement;
+ if(!f)return;
+ f.text().then(content=>{
+  try{
+   if(f.size>5*1024*1024)throw Error('El archivo CSV excede 5 MB.');
+   const prepared=prepareLiftResultsImport(content,m);
+   const movementName=m==='sq'?'sentadilla':'press banca';
+   if(!confirm('Se importarán '+prepared.count+' deportistas y '+prepared.attempts+' intentos de '+movementName+'.\n\nSolo se reemplazarán los resultados de esta prueba; la nómina y los otros movimientos quedarán intactos.\n\n¿Confirmar importación de '+f.name+'?'))return;
+   applyLiftResultsImport(prepared);save();activeLifterId=null;render();
+   alert('Resultados de '+movementName+' importados correctamente para '+prepared.count+' deportistas.');
+  }catch(err){alert('No se importó ningún resultado: '+err.message)}
+ }).finally(()=>{x.value=''});
+}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);state.plates=normalizePlates(state.plates);save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
 render();
