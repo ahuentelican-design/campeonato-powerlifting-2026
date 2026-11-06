@@ -64,3 +64,12 @@ Después de registrar los deportistas y sus cargas iniciales de sentadilla (SQ) 
 Al seleccionar **Confirmar y cerrar nómina**, se desactivan inscripciones, edición de deportistas y cambios de grupo, y se habilita **Exportar nómina CSV**. El archivo contiene solamente ID estable, nombre, categoría, sexo, peso, división, grupo y cargas iniciales de SQ/BP/DL; no incluye decisiones de jueces ni resultados.
 
 **Importante:** este paso prepara la nómina maestra, pero la importación CSV especializada por tarima y la posterior consolidación de resultados todavía no están implementadas. Se mantiene por separado el respaldo JSON completo de cada navegador.
+
+## Tarimas SQ y BP: selección de grupo y revisión en Configuración
+
+- **Configuración → Tarimas SQ / BP · Revisión de grupos** muestra la distribución fija: etapa 1 (SQ/A y BP/B), etapa 2 (SQ/B y BP/A) y etapa 3 (peso muerto conjunto). Incluye nóminas, identificadores y cargas iniciales de SQ y BP por grupo. Para cambiar asignaciones, se utiliza Inscripciones antes de cerrar la nómina o tras reabrirla.
+- **Mesa de levantamientos:** en SQ y BP aparece un selector `Grupo A / Grupo B / Todos`. Los filtros de SQ y BP son independientes, se restablecen al recargar la página y comienzan respectivamente en A y B, correspondientes a la primera rotación. La selección solo filtra la vista y el orden; **no borra ni modifica los intentos** del otro grupo.
+- **Peso muerto** siempre muestra todos los deportistas, sin filtro por grupo.
+- Si aún no se han asignado grupos, la mesa muestra todos los participantes y señala que falta distribución.
+
+**Nota:** la elección de grupo es local a este navegador, no una configuración compartida entre computadores. No incluye aún importación CSV entre tarimas ni consolidación de resultados.
