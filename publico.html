@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>Pantalla pública · Powerlifting 2026</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#f7f9ff;background:#0e1728}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 92% 5%,#1b2d49 0,#0e1728 48%,#09121f 100%)}
+.screen{min-height:100vh;padding:clamp(20px,3vw,52px);display:flex;flex-direction:column;gap:clamp(14px,2.5vh,35px)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:1px solid #40506a;padding-bottom:19px}
+.kicker{color:#f0bd73;font-size:clamp(12px,1.4vw,20px);font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.subhead{color:#aab9cd;font-size:clamp(14px,1.6vw,24px);margin-top:6px}
+.live-indicator{display:flex;align-items:center;gap:9px;font-size:clamp(13px,1.4vw,20px);color:#b8cee0;font-weight:750;white-space:nowrap}
+.live-dot{width:12px;height:12px;border-radius:50%;background:#31d9a2;box-shadow:0 0 14px #31d9a2}
+.live-indicator.offline .live-dot{background:#e7a84e;box-shadow:none}
+.main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(16px,3vw,44px);flex:1;align-items:center}
+.athlete{font-size:clamp(40px,6.2vw,110px);letter-spacing:-.055em;font-weight:950;line-height:1.07;overflow-wrap:anywhere;margin:10px 0 26px}
+.eyebrow{font-size:clamp(16px,1.85vw,30px);color:#bdcce0;font-weight:700}
+.rowchips{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 18px}
+.chip{padding:10px 16px;border-radius:13px;background:#22314a;border:1px solid #3e5673;color:#e5efff;font-size:clamp(14px,1.5vw,23px);font-weight:800}
+.weight{font-size:clamp(78px,12vw,210px);font-variant-numeric:tabular-nums;letter-spacing:-.08em;line-height:.9;font-weight:1000;margin:18px 0}
+.weight span{font-size:.28em;color:#aabed7;letter-spacing:0;font-weight:800}
+.diagram{min-height:260px;border-radius:22px;background:#17263e;border:1px solid #344865;padding:25px;display:flex;align-items:center;justify-content:center}
+.diagram svg{width:100%;max-height:330px;overflow:visible}
+.error{color:#ffc184;text-align:center;font-size:clamp(16px,1.5vw,25px)}
+.per-side{margin-top:15px;color:#9eb2cc;text-align:right;font-size:clamp(13px,1.4vw,22px)}
+.result{display:flex;align-items:center;justify-content:center;gap:16px;min-height:clamp(90px,15vh,175px);padding:18px 24px;border:2px solid #4b5f7a;border-radius:22px;background:#25334b;font-size:clamp(38px,6.5vw,112px);font-weight:1000;letter-spacing:.025em;text-align:center;line-height:1.05}
+.result.valid{background:#075f43;border-color:#32ecaa;color:#e6fff6;box-shadow:0 0 70px #1acc8530}
+.result.null{background:#8c1b29;border-color:#ff5967;color:#fff4f4;box-shadow:0 0 70px #d82a4a35}
+.result.pending{color:#f4f6fc}
+.votes{display:flex;gap:clamp(8px,1.5vw,24px);flex-wrap:wrap;margin-top:20px;justify-content:center}
+.vote{display:flex;gap:12px;align-items:center;justify-content:center;padding:10px 16px;background:#152339;border:1px solid #324863;border-radius:12px;color:#bdcbe0;font-size:clamp(16px,1.7vw,26px);font-weight:900}
+.vote b{border-radius:50%;display:grid;place-items:center;width:38px;height:38px;background:#384a60;color:#fff}
+.vote.good b{background:#148f64}.vote.bad b{background:#d73f4f}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#91a6c3;font-size:clamp(12px,1.3vw,18px)}
+#fullscreen{border:1px solid #58708c;border-radius:10px;background:#1c2c44;color:#fff;font:inherit;font-size:14px;padding:11px 18px;cursor:pointer}
+@media(max-width:800px){.main{grid-template-columns:1fr}.screen{gap:24px}.athlete{margin:10px 0}.diagram{min-height:180px}.result{min-height:100px}.weight{font-size:clamp(65px,18vw,145px)}}
+</style></head>
+<body><main class="screen">
+<header class="top"><div><div class="kicker">Colegio Felmer Niklitschek · Powerlifting 2026</div><div class="subhead">Pantalla pública · Mesa de levantamientos</div></div><div class="live-indicator offline" id="live"><span class="live-dot"></span><span id="connection">Esperando mesa</span></div></header>
+<div class="main"><section><div class="rowchips"><span class="chip" id="movement">Selecciona un levantador</span><span class="chip" id="group">Grupo —</span><span class="chip" id="round">Intento —</span></div>
+<div class="eyebrow">EN PLATAFORMA</div><h1 class="athlete" id="athlete">Esperando participante…</h1><div class="weight" id="weight">— <span>kg</span></div>
+<div id="result" class="result pending" aria-live="polite">PREPARANDO</div><div class="votes" id="votes"></div></section>
+<section><div class="diagram" id="diagram"><span class="error">La barra aparecerá al seleccionar una carga.</span></div><div class="per-side" id="per-side">Barra de 20 kg · carga simétrica</div></section></div>
+<footer class="foot"><span>Resultados actualizados desde la mesa del mismo navegador.</span><button type="button" id="fullscreen">Pantalla completa ⛶</button></footer>
+</main><script src="publico.js?v=20261106-pantalla-publica" defer></script></body></html>
