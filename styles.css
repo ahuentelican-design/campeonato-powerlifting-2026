@@ -90,3 +90,12 @@ tr.lift-current{background:#fff9e9!important}
 .lift-blocked .judge-vote:disabled{opacity:.28;cursor:not-allowed;transform:none}
 .lift-blocked .attempt-load-cell input:disabled{background:#e9edf2;color:#8b96a3;cursor:not-allowed}
 .attempt-locked-note{font-size:11px;font-weight:700;color:#a76a2e;max-width:220px;line-height:1.4}
+
+/* Distribución de grupos de competencia después de inscribir */
+.group-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.group-stat{display:grid;gap:6px;background:#f6f8fb;border:1px solid #e2e8f0;border-radius:11px;padding:15px}
+.group-stat span{font-size:12px;font-weight:800;letter-spacing:.04em;color:#8a692c}
+.group-stat strong{font-size:19px;color:#20324b}
+.group-stat small{font-size:12px;color:#75849a}
+.group-assignment{min-width:90px!important;width:100px!important}
+@media(max-width:650px){.group-stats{grid-template-columns:1fr}}
