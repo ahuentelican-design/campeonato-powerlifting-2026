@@ -152,3 +152,13 @@ tr.lift-current{background:#fff9e9!important}
 .next-load-input:disabled{background:#edf0f5;color:#8795a5}
 .next-load-pending,.next-load-final{font-size:11px;color:#8290a0;line-height:1.4;display:block;max-width:160px}
 @media(max-width:900px){.next-load-column{min-width:142px}.next-load-input{width:80px}}
+
+/* Transferencia segura de resultados entre tarimas */
+.transfer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.transfer-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;background:#f7f9fc;border:1px solid #e0e7ef;border-radius:12px}
+.transfer-card strong{color:#203149}
+.transfer-card .btn{margin-top:auto}
+.transfer-status{font-size:12px;color:#6b7e95}
+.transfer-export{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0 18px}
+.transfer-export span{font-size:12px;color:#6b7e95}
+@media(max-width:680px){.transfer-grid{grid-template-columns:1fr}}
