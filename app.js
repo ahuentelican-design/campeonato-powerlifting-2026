@@ -418,6 +418,9 @@ function plateGraphic(plan){
  // Marco adaptable: se agranda si hay muchos discos, sin cortarlos.
  const width=Math.max(480,Math.ceil(groupWidth+130));
  const midY=112,collarX=width-37,discEnd=collarX-7;
+ // Mantener los discos a la derecha y acortar solo la barra gris expuesta.
+ const barStartX=Math.max(16,discEnd-groupWidth-72);
+ const barEndX=collarX+14+9;
  let x=discEnd-groupWidth;
  let rects='';
  for(const d of discs){
@@ -431,8 +434,8 @@ function plateGraphic(plan){
    x+=d.width+gap;
  }
  return '<svg role="img" aria-label="Discos por lado ordenados de menor a mayor hacia la derecha" viewBox="0 0 '+width+' 205" xmlns="http://www.w3.org/2000/svg">'+
-  '<rect x="20" y="'+(midY-5)+'" width="'+(width-29)+'" height="10" rx="5" fill="#8191a7"/>'+
-  '<rect x="28" y="'+(midY-14)+'" width="15" height="28" rx="4" fill="#46586f"/>'+
+  '<rect x="'+barStartX+'" y="'+(midY-5)+'" width="'+(barEndX-barStartX)+'" height="10" rx="5" fill="#8191a7"/>'+
+  '<rect x="'+(barStartX+8)+'" y="'+(midY-14)+'" width="15" height="28" rx="4" fill="#46586f"/>'+
   rects+
   '<rect x="'+collarX+'" y="'+(midY-23)+'" width="14" height="46" rx="4" fill="#4b5d75"/>'+
   '<text x="20" y="191" fill="#718096" font-size="13">Barra: 20 kg</text>'+
