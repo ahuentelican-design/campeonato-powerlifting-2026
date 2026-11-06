@@ -14,7 +14,7 @@ const attempt=()=>({kg:null,votes:[null,null,null]});
 const newLifts=()=>Object.fromEntries(MOV.map(m=>[m[0],[attempt(),attempt(),attempt()]]));
 let state=load(),view='overview',movement='sq',round=0,filter='Todos',editing=null,activeLifterId=null;
 // La selección es local a cada mesa: SQ inicia en A y BP en B (primera rotación).
-const stationFilters={sq:'A',bp:'B'};
+const stationFilters={sq:'A',bp:'B',dl:'Todos'};
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.athletes)&&x.settings){if(!Array.isArray(x.plates))x.plates=DEFAULT_PLATES.map(p=>({...p}));normalizeJudges(x);if(typeof x.groupsLocked!=='boolean')x.groupsLocked=false;return x}}catch(e){}return defaults()}
 function normalizeJudges(x){
  x.judgeCount=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(x.judgeCount)||3)));
@@ -126,7 +126,7 @@ function liftingPage(){
  stationGroupControls()+
  '<div class="exercise-tabs">'+[0,1,2].map(i=>'<button data-round="'+i+'" class="'+(round===i?'active':'')+'">Intento '+(i+1)+'</button>').join('')+'</div></div>'+
  loadWidget(sorted)+'</div>'+
- panel('Orden de salida · '+MOV.find(m=>m[0]===movement)[1]+(movement==='dl'?' · Todos los participantes':selectedStationGroup()==='Todos'?' · Todos':' · Grupo '+selectedStationGroup())+' · Intento '+(round+1),table(['En plataforma','Deportista','Carga (kg)','Decisiones de los jueces','','','Resultado'],rows))+
+ panel('Orden de salida · '+MOV.find(m=>m[0]===movement)[1]+(selectedStationGroup()==='Todos'?' · Todos los grupos':' · Grupo '+selectedStationGroup())+' · Intento '+(round+1)+' · '+sorted.length+' participantes',table(['En plataforma','Deportista','Carga (kg)','Decisiones de los jueces','','','Resultado'],rows.length?rows:['<tr><td colspan="7" class="station-no-athletes">No hay participantes asignados a este grupo. Selecciona otro grupo o revisa las asignaciones en Inscripciones.</td></tr>']))+
  '<div class="warning">El intento 3 se bloquea para cada deportista hasta registrar la carga del intento 2. En los intentos 2 y 3 se muestra en verde la carga anterior válida y en rojo la nula. La siguiente carga nunca puede ser menor que la anterior; cuando el intento previo se resuelve, se propone automáticamente como mínimo sin reemplazar cargas mayores ya registradas.</div>';
 }
 function minimumForAttempt(a,m,r){
@@ -171,29 +171,37 @@ function attemptLoadCell(a,t){
 
 function validLoad(t){return Number.isFinite(Number(t.kg))&&Number(t.kg)>=20}
 function selectedStationGroup(){
- if(movement==='dl'||!state.athletes.some(a=>a.stationGroup==='A'||a.stationGroup==='B'))return 'Todos';
- return stationFilters[movement]||'Todos';
+ const assigned=state.athletes.some(a=>a.stationGroup==='A'||a.stationGroup==='B');
+ return assigned?(stationFilters[movement]||'Todos'):'Todos';
 }
-function stationVisible(a){const g=selectedStationGroup();return g==='Todos'||a.stationGroup===g}
+function stationVisible(a){
+ const g=selectedStationGroup();
+ return g==='Todos'||a.stationGroup===g;
+}
 function stationStageLabel(){
  const g=selectedStationGroup();
- if(movement==='dl')return 'Etapa 3 · Peso muerto · Grupos A + B';
- if(g==='Todos')return 'Vista general · Sin filtro de grupo';
+ if(movement==='dl')return 'Etapa 3 · Peso muerto · '+(g==='Todos'?'Grupos A + B':'Grupo '+g);
+ if(g==='Todos')return 'Sentadilla y banca · Vista general';
  const first=(movement==='sq'&&g==='A')||(movement==='bp'&&g==='B');
  return (first?'Etapa 1':'Etapa 2')+' · '+(movement==='sq'?'Sentadilla':'Press banca')+' · Grupo '+g;
 }
 function stationGroupControls(){
- if(movement==='dl')return '<div class="station-filter-summary"><strong>Etapa 3:</strong> peso muerto con todos los participantes de A y B.</div>';
  const assigned=state.athletes.filter(a=>a.stationGroup==='A'||a.stationGroup==='B').length;
  const selected=selectedStationGroup();
+ const count=state.athletes.filter(stationVisible).length;
  const options=['A','B','Todos'].map(g=>{
-  const count=g==='Todos'?state.athletes.length:state.athletes.filter(a=>a.stationGroup===g).length;
-  return '<button type="button" data-station-filter="'+g+'" class="'+(selected===g?'active':'')+'" aria-pressed="'+(selected===g)+'">'+(g==='Todos'?'Todos':'Grupo '+g)+' <small>('+count+')</small></button>';
+  const n=g==='Todos'?state.athletes.length:state.athletes.filter(a=>a.stationGroup===g).length;
+  const label=g==='Todos'?'Todos los grupos':'Grupo '+g;
+  return '<option value="'+g+'"'+(selected===g?' selected':'')+'>'+label+' ('+n+')</option>';
  }).join('');
- return '<div class="station-filter"><div class="station-filter-heading"><strong>Grupo en tarima</strong><span>'+esc(stationStageLabel())+'</span></div>'+
-  '<div class="exercise-tabs station-group-tabs">'+options+'</div>'+
-  (assigned===0?'<p class="footnote">Todavía no se han asignado grupos. Se muestra la nómina completa hasta distribuir A/B desde Inscripciones.</p>':
-   assigned<state.athletes.length?'<p class="footnote">Hay '+(state.athletes.length-assigned)+' deportistas pendientes de asignación. Puedes consultarlos en «Todos».</p>':'')+'</div>';
+ const info=assigned===0?
+  '<p class="footnote station-filter-note">Aún no hay grupos asignados. Se muestra la nómina completa; distribuye A/B desde Inscripciones.</p>':
+  assigned<state.athletes.length?
+  '<p class="footnote station-filter-note">Hay '+(state.athletes.length-assigned)+' deportistas sin grupo. Usa «Todos los grupos» para verlos.</p>':'';
+ return '<div class="station-filter station-filter-select"><div class="station-filter-heading"><strong>Seleccionar participantes por grupo</strong><span>'+esc(stationStageLabel())+'</span></div>'+
+  '<div class="station-filter-line"><label class="field" for="stationGroupSelect">Grupo de competencia'+
+  '<select id="stationGroupSelect" aria-label="Seleccionar grupo de la prueba '+esc(MOV.find(m=>m[0]===movement)[1])+'">'+options+'</select></label>'+
+  '<div class="station-filter-count"><strong>'+count+'</strong><span>'+ (count===1?'participante':'participantes')+' · intento '+(round+1)+'</span></div></div>'+info+'</div>';
 }
 function orderedLifters(){return state.athletes.filter(stationVisible).map(a=>({a,t:lifts(a,movement)[round]})).sort((x,y)=>(validLoad(x.t)?num(x.t.kg):Infinity)-(validLoad(y.t)?num(y.t.kg):Infinity)||x.a.name.localeCompare(y.a.name,'es'))}
 function activeLifter(sorted){const available=sorted.filter(x=>canUseAttempt(x.a,movement,round));const chosen=available.find(x=>x.a.id===activeLifterId);if(chosen)return chosen;return available.find(x=>validLoad(x.t)&&result(x.t)==='Pendiente')||available.find(x=>validLoad(x.t))||null}
@@ -318,7 +326,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 else if(b.id==='lockGroups'){if(state.groupsLocked)return;if(!state.athletes.length||state.athletes.some(a=>!['A','B'].includes(a.stationGroup))){alert('Asigna A o B a todos los participantes.');return}if(!confirm('¿Confirmar grupos y cerrar inscripciones?'))return;ensureIds();state.groupsLocked=true;save();render();return}
 else if(b.id==='unlockGroups'){if(!state.groupsLocked)return;if(!confirm('¿Reabrir inscripciones y grupos?'))return;state.groupsLocked=false;save();render();return}
 else if(b.id==='exportRoster'){rosterCsv();return}
-else if(b.dataset.judgeVote!==undefined){const a=state.athletes.find(a=>a.id===b.dataset.judgeVote);if(!a)return;if(!canUseAttempt(a,movement,round)){alert('Registra primero la carga del intento 2 para habilitar el intento 3.');return}const t=lifts(a,movement)[round];const j=Number(b.dataset.judgeIndex),choice=b.dataset.voteChoice==='true';if(!Array.isArray(t.votes))t.votes=[null,null,null];if(!Number.isInteger(j)||j<0||j>=judgeCount())return;t.votes[j]=t.votes[j]===choice?null:choice;save();render()}else if(b.dataset.view){view=b.dataset.view;editing=null;render()}else if(b.dataset.go){view=b.dataset.go;render()}else if(b.dataset.move){movement=b.dataset.move;activeLifterId=null;render()}else if(b.dataset.stationFilter!==undefined){if(movement==='dl')return;const g=b.dataset.stationFilter;if(!['A','B','Todos'].includes(g))return;stationFilters[movement]=g;activeLifterId=null;render()}else if(b.dataset.round){round=+b.dataset.round;activeLifterId=null;render()}else if(b.dataset.current){const a=state.athletes.find(a=>a.id===b.dataset.current);if(!a||!canUseAttempt(a,movement,round))return;activeLifterId=b.dataset.current;render()}else if(b.dataset.edit){if(state.groupsLocked)return;editing=b.dataset.edit;render()}else if(b.dataset.remove){if(state.groupsLocked)return;if(confirm('¿Eliminar participante y todos sus intentos?')){state.athletes=state.athletes.filter(a=>a.id!==b.dataset.remove);save();render()}}else if(b.id==='cancelEdit'){editing=null;render()}else if(b.id==='resetPlates'){if(confirm('¿Restablecer los pares y colores de ejemplo?')){state.plates=DEFAULT_PLATES.map(p=>({...p}));save();render()}}else if(b.id==='loadDemo'){if(state.groupsLocked)return;if(confirm('¿Reemplazar las inscripciones actuales por una simulación con 35 deportistas ficticios?'))demo()}else if(b.id==='clearAll'){if(state.groupsLocked)return;if(confirm('¿Eliminar permanentemente las inscripciones de este navegador?')){state.athletes=[];save();render()}}else if(b.id==='exportJSON'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='respaldo-powerlifting-2026.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}else if(b.id==='importJSON'){document.getElementById('importFile').click()}});
+else if(b.dataset.judgeVote!==undefined){const a=state.athletes.find(a=>a.id===b.dataset.judgeVote);if(!a)return;if(!canUseAttempt(a,movement,round)){alert('Registra primero la carga del intento 2 para habilitar el intento 3.');return}const t=lifts(a,movement)[round];const j=Number(b.dataset.judgeIndex),choice=b.dataset.voteChoice==='true';if(!Array.isArray(t.votes))t.votes=[null,null,null];if(!Number.isInteger(j)||j<0||j>=judgeCount())return;t.votes[j]=t.votes[j]===choice?null:choice;save();render()}else if(b.dataset.view){view=b.dataset.view;editing=null;render()}else if(b.dataset.go){view=b.dataset.go;render()}else if(b.dataset.move){movement=b.dataset.move;activeLifterId=null;render()}else if(b.dataset.round){round=+b.dataset.round;activeLifterId=null;render()}else if(b.dataset.current){const a=state.athletes.find(a=>a.id===b.dataset.current);if(!a||!canUseAttempt(a,movement,round))return;activeLifterId=b.dataset.current;render()}else if(b.dataset.edit){if(state.groupsLocked)return;editing=b.dataset.edit;render()}else if(b.dataset.remove){if(state.groupsLocked)return;if(confirm('¿Eliminar participante y todos sus intentos?')){state.athletes=state.athletes.filter(a=>a.id!==b.dataset.remove);save();render()}}else if(b.id==='cancelEdit'){editing=null;render()}else if(b.id==='resetPlates'){if(confirm('¿Restablecer los pares y colores de ejemplo?')){state.plates=DEFAULT_PLATES.map(p=>({...p}));save();render()}}else if(b.id==='loadDemo'){if(state.groupsLocked)return;if(confirm('¿Reemplazar las inscripciones actuales por una simulación con 35 deportistas ficticios?'))demo()}else if(b.id==='clearAll'){if(state.groupsLocked)return;if(confirm('¿Eliminar permanentemente las inscripciones de este navegador?')){state.athletes=[];save();render()}}else if(b.id==='exportJSON'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='respaldo-powerlifting-2026.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}else if(b.id==='importJSON'){document.getElementById('importFile').click()}});
 document.addEventListener('submit',e=>{e.preventDefault();const f=e.target,d=new FormData(f);if(f.id==='athleteForm'){if(state.groupsLocked)return;const name=String(d.get('name')||'').trim(),weight=Number(d.get('weight'));if(!name||weight<=0)return;let a=state.athletes.find(a=>a.id===editing);if(!a){a={id:'ath-'+Date.now()+'-'+Math.random().toString(36).slice(2),lifts:newLifts()};state.athletes.push(a)}Object.assign(a,{name,weight,group:String(d.get('group')),sex:String(d.get('sex'))});for(const m of MOV){const initial=Number(d.get('initial_'+m[0]));if(!Number.isFinite(initial)||initial<=0)return;lifts(a,m[0])[0].kg=initial}editing=null}else if(f.id==='settingsForm'){for(const k of Object.keys(state.settings))state.settings[k]=Number(d.get(k))||state.settings[k]}
 else if(f.id==='judgesForm'){
  state.judgeCount=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(d.get('judgeCount'))||3)));
@@ -328,7 +336,7 @@ else if(f.id==='judgesForm'){
  }));
 }
 save();render()});
-document.addEventListener('change',e=>{const x=e.target;if(x.dataset.stationGroup!==undefined){if(state.groupsLocked)return;const a=state.athletes.find(a=>a.id===x.dataset.stationGroup);if(!a)return;a.stationGroup=['A','B'].includes(x.value)?x.value:'';save();render();return}else if(x.id==='judgeCount'){
+document.addEventListener('change',e=>{const x=e.target;if(x.id==='stationGroupSelect'){const g=x.value;if(!['A','B','Todos'].includes(g))return;stationFilters[movement]=g;activeLifterId=null;render();return}else if(x.dataset.stationGroup!==undefined){if(state.groupsLocked)return;const a=state.athletes.find(a=>a.id===x.dataset.stationGroup);if(!a)return;a.stationGroup=['A','B'].includes(x.value)?x.value:'';save();render();return}else if(x.id==='judgeCount'){
  const n=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(x.value)||3)));
  document.querySelectorAll('[data-judge-entry]').forEach(el=>{el.hidden=Number(el.dataset.judgeEntry)>=n});
 }else if(x.dataset.pairs!==undefined||x.dataset.color!==undefined){const i=Number(x.dataset.pairs??x.dataset.color);const p=state.plates[i];if(!p)return;if(x.dataset.pairs!==undefined)p.pairs=Math.max(0,Math.min(100,Math.floor(Number(x.value)||0)));else if(/^#[a-fA-F0-9]{6}$/.test(x.value))p.color=x.value;save();render()}else if(x.dataset.kg||x.dataset.vote){const a=state.athletes.find(a=>a.id===(x.dataset.kg||x.dataset.vote));if(!a)return;const t=lifts(a,movement)[round];if(!canUseAttempt(a,movement,round)){alert('Registra primero la carga del intento 2 para habilitar el intento 3.');render();return}if(x.dataset.kg){
