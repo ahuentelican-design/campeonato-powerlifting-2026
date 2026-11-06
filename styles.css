@@ -99,3 +99,29 @@ tr.lift-current{background:#fff9e9!important}
 .group-stat small{font-size:12px;color:#75849a}
 .group-assignment{min-width:90px!important;width:100px!important}
 @media(max-width:650px){.group-stats{grid-template-columns:1fr}}
+
+/* Revisión de rotaciones y selección de grupo para SQ/BP */
+.station-filter{padding:14px 16px 4px;margin:0 0 12px;border:1px solid #e5eaf2;border-radius:12px;background:#f8fafc}
+.station-filter-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+.station-filter-heading strong{font-size:13px;color:#1c2d45}
+.station-filter-heading span{font-size:12px;color:#63758c}
+.station-filter .station-group-tabs{margin-bottom:8px}
+.station-group-tabs button{font-size:12px;padding:8px 13px}
+.station-group-tabs button small{font-size:11px;font-weight:500}
+.station-filter-summary{margin:3px 0 16px;padding:12px 15px;background:#f5f8fc;border:1px solid #e1e8f0;border-radius:10px;color:#445971;font-size:13px}
+.station-review-intro{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:17px}
+.station-review-intro strong{color:#22344a}
+.station-review-intro p{margin:4px 0 0}
+.station-rotation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:12px}
+.station-rotation-card{padding:16px;border:1px solid #e1e8f0;border-radius:12px;background:#f7f9fc}
+.station-rotation-card>strong{display:block;margin-bottom:12px;color:#1f3048}
+.station-rotation-card>div{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:#63758b}
+.station-rotation-card b{padding:5px 9px;border-radius:8px;background:#e7edf5;color:#1f3652;white-space:nowrap}
+.station-deadlift-info{padding:12px 15px;background:#f9f3e7;border:1px solid #f0e2c4;border-radius:10px;font-size:13px;color:#6c542d}
+.station-roster-list{display:grid;gap:16px;margin-top:20px}
+.station-roster{border:1px solid #e2e8f0;border-radius:11px;overflow:hidden}
+.station-roster-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;background:#f6f8fb}
+.station-roster-title strong{color:#22344d}
+.station-roster-title span{font-size:12px;color:#73849a}
+.station-empty{padding:15px}
+@media(max-width:700px){.station-rotation-grid{grid-template-columns:1fr}.station-rotation-card>div{font-size:11px}}
