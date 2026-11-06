@@ -1,5 +1,8 @@
 'use strict';
 const KEY='powerlifting-campeonato-2026-web-v2';
+const PUBLIC_SCREEN_KEY=KEY+'-pantalla-publica';
+const PUBLIC_SCREEN_CHANNEL='powerlifting-campeonato-2026-publico';
+const audienceChannel=typeof BroadcastChannel==='function'?new BroadcastChannel(PUBLIC_SCREEN_CHANNEL):null;
 const MOV=[['sq','Sentadilla'],['bp','Press banca'],['dl','Peso muerto']];
 const GROUPS=['Escolar Menor','Escolar Mayor','Exalumnos'];
 const DEFAULT_PLATES=[
@@ -239,7 +242,37 @@ function stationPanel(){
  return panel('Distribución de grupos A y B','<div class="panelbody">'+stats+'<p class="footnote">'+count+' de '+state.athletes.length+' participantes asignados. El reparto equilibra las cargas iniciales de sentadilla y banca.</p>'+(state.groupsLocked?'<div class="warning">Nómina cerrada. Exporta el CSV para los equipos.</div>':!ready?'<div class="warning">Completa las cargas iniciales de sentadilla y banca de todos (mínimo 20 kg).</div>':'')+'<div class="actions">'+actions+'</div></div>');
 }
 
-function render(){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));const main=document.getElementById('main');main.innerHTML=({overview:overview,athletes:athletesPage,lifting:liftingPage,awards:awardsPage,settings:settingsPage,plates:platesPage}[view]||overview)()}
+function render(){
+ document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ const main=document.getElementById('main');
+ main.innerHTML=({overview:overview,athletes:athletesPage,lifting:liftingPage,awards:awardsPage,settings:settingsPage,plates:platesPage}[view]||overview)();
+ if(view==='lifting')publishAudienceScreen();
+}
+function audienceSnapshot(){
+ const selected=activeLifter(orderedLifters()),t=selected?.t;
+ const load=t&&validLoad(t)?Number(t.kg):null;
+ const plan=load===null?null:platePlan(load);
+ const judgement=selected?result(t):'Pendiente';
+ return {
+  version:1,updatedAt:Date.now(),
+  movement,movementName:MOV.find(m=>m[0]===movement)?.[1]||'',
+  group:selected?.a.stationGroup||selectedStationGroup(),
+  round:round+1,
+  athlete:selected?.a.name||'',athleteId:selected?.a.competitionId||selected?.a.id||'',
+  weight:load,status:judgement,
+  judges:judgeCount(),
+  votes:Array.from({length:judgeCount()},(_,i)=>t?.votes?.[i]===true?true:t?.votes?.[i]===false?false:null),
+  plates:plan?.ok?plan.plates.map(p=>({kg:Number(p.kg),color:p.color})):[],
+  platesOk:!!plan?.ok,plateError:plan&&!plan.ok?plan.message:'',
+  perSide:plan?.ok?plan.side:null
+ };
+}
+function publishAudienceScreen(){
+ const info=audienceSnapshot();
+ try{localStorage.setItem(PUBLIC_SCREEN_KEY,JSON.stringify(info))}catch(e){}
+ try{audienceChannel?.postMessage(info)}catch(e){}
+}
+
 function overview(){const done=state.athletes.flatMap(a=>MOV.flatMap(m=>lifts(a,m[0]).filter((t,i)=>canUseAttempt(a,m[0],i)))).filter(t=>result(t)!=='Pendiente');const stats=[['Inscritos',state.athletes.length],['Escolar Menor',state.athletes.filter(a=>group(a)==='Escolar Menor').length],['Escolar Mayor',state.athletes.filter(a=>group(a)==='Escolar Mayor').length],['Exalumnos',state.athletes.filter(a=>group(a)==='Exalumnos').length]];return header('Panel general','Seguimiento del campeonato y acceso a la mesa de control.')+'<div class="cards">'+stats.map(s=>'<div class="stat"><label>'+s[0]+'</label><strong>'+s[1]+'</strong><small>deportistas</small></div>').join('')+'</div>'+panel('Estado de la competencia','<div class="panelbody"><p><strong>'+done.length+'</strong> intentos evaluados · <strong>'+done.filter(t=>result(t)==='Válido').length+'</strong> válidos · <strong>'+done.filter(t=>result(t)==='Nulo').length+'</strong> nulos.</p><div class="actions"><button class="btn" data-go="athletes">Gestionar inscripciones</button><button class="btn light" data-go="lifting">Mesa de levantamientos</button><button class="btn light" data-go="awards">Ver premiación</button></div></div>')+(state.athletes.length?'':'<div class="warning">No hay deportistas registrados. Puedes inscribirlos uno a uno o cargar la simulación ficticia desde Inscripciones.</div>')}
 function athleteForm(){
 if(state.groupsLocked)return '<div class="warning">Nómina cerrada: utiliza «Reabrir nómina» para modificar participantes.</div>';
@@ -273,6 +306,7 @@ function liftingPage(){
  const sorted=orderedLifters(),selected=activeLifter(sorted);
  const rows=sorted.map(({a,t},i)=>{const locked=round===2&&!canUseAttempt(a,movement,round);return '<tr class="'+(selected&&a.id===selected.a.id?'lift-current':'')+(locked?' lift-blocked':'')+'"><td><button class="select-lifter '+(selected&&a.id===selected.a.id?'chosen':'')+'" data-current="'+esc(a.id)+'"'+(locked?' disabled title="Registra la carga del intento 2"':'')+'>'+(selected&&a.id===selected.a.id?'● ':'')+(i+1)+'</button></td><td><strong>'+esc(a.name)+'</strong><br><small>'+esc(group(a))+' · '+esc(division(a))+'</small></td><td>'+attemptLoadCell(a,t)+'</td><td class="next-load-column">'+nextLoadCell(a,t)+'</td><td class="vote-cell" colspan="3"><div class="judges-row">'+Array.from({length:judgeCount()},(_,j)=>voteControls(a,t,j)).join('')+'</div></td><td>'+tag(locked?'Bloqueado':result(t),!locked&&result(t)==='Válido'?'good':!locked&&result(t)==='Nulo'?'bad':'')+'</td></tr>'});
  return '<div class="lifting-top"><div class="lifting-info">'+header('Mesa de levantamientos','Selecciona en la columna Orden al deportista en plataforma. El gráfico indica los discos necesarios para su carga.')+
+ '<div class="public-screen-action"><button type="button" class="btn light" id="openAudienceDisplay">Abrir pantalla pública ↗</button><span>En vivo en otra ventana del mismo navegador, ideal para un segundo monitor.</span></div>'+
  '<div class="exercise-tabs">'+MOV.map(m=>'<button data-move="'+m[0]+'" class="'+(movement===m[0]?'active':'')+'">'+m[1]+'</button>').join('')+'</div>'+
  stationGroupControls()+
  '<div class="exercise-tabs">'+[0,1,2].map(i=>'<button data-round="'+i+'" class="'+(round===i?'active':'')+'">Intento '+(i+1)+'</button>').join('')+'</div></div>'+
@@ -499,7 +533,12 @@ function settingsPage(){
  '<div class="warning">Exalumnos no tienen divisiones de peso ni clasificación separada por sexo. Su premiación es abierta y utiliza exclusivamente el índice relativo.</div>';
 }
 function demo(){const names=['Agustín Vera','Joaquín Carrasco','Tomás Alarcón','Sebastián Soto','Benjamín Díaz','Mateo Torres','Antonia Aguilera','Valentina Rojas','Felipe Muñoz','Vicente Ruiz','Martina León','Ignacio Morales','Diego Valdés','Matías Vega','Lucas Riquelme','Francisca Silva','Camila Hernández','Nicolás Oyarzún','Javier Molina','Emilio Fuentes','Isidora Paredes','Cristóbal Andrade','Joaquín Pérez','Sofía Morales','Gabriel Castro','Francisco Cárcamo','Daniel Muñoz','Esteban Muñoz','Rodrigo Aguilar','Pablo Salinas','Andrés Bravo','Paula Vidal','Mauricio Núñez','Felipe Herrera','Carolina Silva'];const female=new Set([6,7,10,15,16,20,23,31]);state.groupsLocked=false;state.athletes=names.map((name,i)=>{let a={id:'demo-'+(i+1),name,group:i<12?'Escolar Menor':i<25?'Escolar Mayor':'Exalumnos',sex:female.has(i)?'F':'M',weight:Math.round((female.has(i)?47:57)+(i*11%43)+(i%3)*.7),lifts:newLifts()};MOV.forEach((m,k)=>{const base=Math.round((a.weight*(k===1?.65:k===2?1.25:1.05)+i%7*2)/2.5)*2.5;lifts(a,m[0]).forEach((t,j)=>{t.kg=base+j*2.5;t.votes=[true,true,(i+j+k)%5!==0]})});return a});save();render()}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='distributeGroups'){if(state.groupsLocked)return;if(state.athletes.some(a=>a.stationGroup)&&!confirm('¿Recalcular los grupos y sustituir asignaciones manuales?'))return;try{distributeGroups();save();render()}catch(err){alert(err.message)}return}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='openAudienceDisplay'){
+ publishAudienceScreen();
+ const page=window.open('publico.html','pantalla-publico');
+ if(page)page.focus();else alert('El navegador bloqueó la ventana. Permite ventanas emergentes y vuelve a intentarlo.');
+ return;
+}else if(b.id==='distributeGroups'){if(state.groupsLocked)return;if(state.athletes.some(a=>a.stationGroup)&&!confirm('¿Recalcular los grupos y sustituir asignaciones manuales?'))return;try{distributeGroups();save();render()}catch(err){alert(err.message)}return}
 else if(b.id==='lockGroups'){if(state.groupsLocked)return;if(!state.athletes.length||state.athletes.some(a=>!['A','B'].includes(a.stationGroup))){alert('Asigna A o B a todos los participantes.');return}if(!confirm('¿Confirmar grupos y cerrar inscripciones?'))return;ensureIds();state.groupsLocked=true;save();render();return}
 else if(b.id==='unlockGroups'){if(!state.groupsLocked)return;if(!confirm('¿Reabrir inscripciones y grupos?'))return;state.groupsLocked=false;save();render();return}
 else if(b.id==='exportRoster'){rosterCsv();return}
