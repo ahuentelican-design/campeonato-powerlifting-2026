@@ -5,7 +5,8 @@ const GROUPS=['Escolar Menor','Escolar Mayor','Exalumnos'];
 const DEFAULT_PLATES=[
 {kg:25,pairs:2,color:'#dc3545'},{kg:20,pairs:2,color:'#3184df'},{kg:15,pairs:2,color:'#f2ca42'},
 {kg:10,pairs:2,color:'#2f9d70'},{kg:5,pairs:2,color:'#f7f8fc'},
-{kg:2.5,pairs:2,color:'#242d3d'},{kg:1.25,pairs:1,color:'#a7b2c4'},
+{kg:2.5,pairs:2,color:'#242d3d'},{kg:2,pairs:1,color:'#7965bf'},
+{kg:1.5,pairs:1,color:'#ed925c'},{kg:1.25,pairs:1,color:'#a7b2c4'},
 {kg:1,pairs:1,color:'#8795a8'},{kg:0.5,pairs:1,color:'#d0dae3'}];
 const MAX_JUDGES=7;
 const DEFAULT_JUDGES=()=>Array.from({length:MAX_JUDGES},()=>({first:'',last:''}));
@@ -17,7 +18,17 @@ const newLifts=()=>Object.fromEntries(MOV.map(m=>[m[0],[attempt(),attempt(),atte
 let state=load(),view='overview',movement='sq',round=0,filter='Todos',editing=null,activeLifterId=null;
 // La selección es local a cada mesa: SQ inicia en A y BP en B (primera rotación).
 const stationFilters={sq:'A',bp:'B',dl:'Todos'};
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.athletes)&&x.settings){if(!Array.isArray(x.plates))x.plates=DEFAULT_PLATES.map(p=>({...p}));normalizeJudges(x);if(typeof x.groupsLocked!=='boolean')x.groupsLocked=false;return x}}catch(e){}return defaults()}
+function normalizePlates(plates){
+ const existing=Array.isArray(plates)?plates:[];
+ // Mantiene pares y colores existentes, incorporando los nuevos pesos sin reiniciar el inventario.
+ const merged=DEFAULT_PLATES.map(def=>{
+  const saved=existing.find(p=>p&&Number(p.kg)===def.kg);
+  if(!saved)return {...def};
+  return {kg:def.kg,pairs:Math.max(0,Math.min(100,Math.floor(Number(saved.pairs)||0))),color:/^#[a-fA-F0-9]{6}$/.test(saved.color)?saved.color:def.color};
+ });
+ return merged;
+}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.athletes)&&x.settings){x.plates=normalizePlates(x.plates);normalizeJudges(x);if(typeof x.groupsLocked!=='boolean')x.groupsLocked=false;return x}}catch(e){}return defaults()}
 function normalizeJudges(x){
  x.judgeCount=Math.max(1,Math.min(MAX_JUDGES,Math.floor(Number(x.judgeCount)||3)));
  const prev=Array.isArray(x.judges)?x.judges:[];
@@ -399,5 +410,5 @@ document.addEventListener('change',e=>{const x=e.target;if(x.id==='stationGroupS
   }else t.kg=requested;
   syncNextLoads(a,movement);
  }else t.votes[+x.dataset.judge]=x.value===''?null:x.value==='true';
- save();render()}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);if(!Array.isArray(state.plates))state.plates=DEFAULT_PLATES.map(p=>({...p}));save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
+ save();render()}else if(x.id==='importFile'){const file=x.files?.[0];if(!file)return;file.text().then(s=>{try{const d=JSON.parse(s);if(!Array.isArray(d.athletes)||!d.settings)throw Error('Formato incorrecto');if(!confirm('¿Reemplazar todos los datos locales por el respaldo?'))return;state=normalizeJudges(d);state.plates=normalizePlates(state.plates);save();render()}catch(err){alert('No se pudo importar: '+err.message)}finally{x.value=''}})}});
 render();
