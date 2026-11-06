@@ -56,3 +56,11 @@ Sin dependencias, frameworks, conexiones externas ni cookies de terceros.
 ## Jueces configurables
 
 En **Configuración → Jueces de la competencia** se seleccionan de 1 a 7 jueces y se ingresan nombres y apellidos. En la mesa se muestran sus iniciales, por ejemplo **J. A.H.** (Alejandro Huentelican), con botones circulares verdes (válido) y rojos (nulo). La mayoría necesaria es `floor(número de jueces / 2) + 1`. Si se configura un número par y los votos empatan, el resultado es **Empate**, no válido. Cambiar la cantidad de jueces puede recalcular resultados anteriores; los votos se conservan en el respaldo JSON.
+
+## Distribución posterior a inscripción — grupos A y B
+
+Después de registrar los deportistas y sus cargas iniciales de sentadilla (SQ) y press banca (BP), utiliza **Inscripciones → Distribuir automáticamente A/B**. El algoritmo ordena por SQ+BP, reparte de dos en dos y elige entre A y B buscando reducir las diferencias de carga total inicial en ambos ejercicios. No cambia las cargas ni los votos. Permite ajustar manualmente la asignación desde la columna **Grupo A/B** antes de confirmarla.
+
+Al seleccionar **Confirmar y cerrar nómina**, se desactivan inscripciones, edición de deportistas y cambios de grupo, y se habilita **Exportar nómina CSV**. El archivo contiene solamente ID estable, nombre, categoría, sexo, peso, división, grupo y cargas iniciales de SQ/BP/DL; no incluye decisiones de jueces ni resultados.
+
+**Importante:** este paso prepara la nómina maestra, pero la importación CSV especializada por tarima y la posterior consolidación de resultados todavía no están implementadas. Se mantiene por separado el respaldo JSON completo de cada navegador.
