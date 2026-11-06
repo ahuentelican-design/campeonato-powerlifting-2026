@@ -83,3 +83,10 @@ tr.lift-current{background:#fff9e9!important}
 .load-widget .load-weight small{font-size:20px}
 .load-widget .load-athlete{font-size:13px}
 .load-widget .load-caption{font-size:10px;margin-top:4px}
+
+/* Intento 3 bloqueado por ausencia de carga en intento 2 */
+.lift-blocked{background:#f6f7f9!important;color:#7e8b9b}
+.lift-blocked .select-lifter:disabled{opacity:.45;cursor:not-allowed}
+.lift-blocked .judge-vote:disabled{opacity:.28;cursor:not-allowed;transform:none}
+.lift-blocked .attempt-load-cell input:disabled{background:#e9edf2;color:#8b96a3;cursor:not-allowed}
+.attempt-locked-note{font-size:11px;font-weight:700;color:#a76a2e;max-width:220px;line-height:1.4}
